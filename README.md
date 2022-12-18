@@ -10,3 +10,9 @@
 [![Binder](https://img.shields.io/badge/binder-beta-blue)](https://mybinder.org/v2/gh/topazeblue/notebooks/beta?labpath=Versions.ipynb)
 
 Collection of Jupyter Notebooks containing various analysis we've done and usually published.
+
+## AMMs
+
+- [AMM Gamma vs Derivative Gamma (Dec 2022)][202212AMMGamma]
+
+[202212AMMGamma]:https://mybinder.org/v2/gh/topazeblue/notebooks/main?labpath=AMMs/2022/202212_AMM_Gamma_vs_Derivatives_Gamma.ipynb
