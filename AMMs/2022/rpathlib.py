@@ -147,8 +147,9 @@ class RPathGen():
         for k,v in kwargs.items():
                 self.params[k] = v
         self._time = np.linspace(0, self.T, self.N+1)
-        
-    def _gauss_vec(self):
+
+    @property  
+    def _new_gauss_vec(self):
         """
         creates a standard Gaussian vector of lenght self.N
         """
@@ -163,7 +164,7 @@ class RPathGen():
         dt = self.T / self.N
         sig_sqrt_dt = sig * sqrt(dt)
         mu_eff_dt = (-0.5*sig*sig + self.params["mu"])*dt
-        logdvals = sig_sqrt_dt*self._gauss_vec() + mu_eff_dt
+        logdvals = sig_sqrt_dt*self._new_gauss_vec + mu_eff_dt
         dvals = np.array([exp(x) for x in logdvals])
         dvals = np.concatenate(([self.val0], dvals))
         return np.cumprod(dvals)
@@ -176,7 +177,8 @@ class RPathGen():
         dt = self.T / self.N
         sig_sqrt_dt = self.params["sig"] * sqrt(dt)
         mu_dt = self.params["mu"]*dt
-        dvals = sig_sqrt_dt*self._gauss_vec() + mu_dt
+        dvals = sig_sqrt_dt*self._new_gauss_vec + mu_dt
+        #print("[_normal]", dt, sig_sqrt_dt, mu_dt, dvals)
         dvals = np.concatenate(([self.val0], dvals))
         return np.cumsum(dvals)
     
@@ -187,7 +189,7 @@ class RPathGen():
         if self.method == self.LOGNORM:
             return self._lognormal()
         elif self.method == self.NORM:
-            return self._lognormal()
+            return self._normal()
         else:
             raise RuntimeError("How TF did we get here?!?")
     
@@ -213,3 +215,6 @@ class RPathGen():
         if rtype is None:
             return result
         return rtype(result)
+
+LOGNORM = RPathGen.LOGNORM 
+NORM = RPathGen.NORM 
