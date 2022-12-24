@@ -17,8 +17,8 @@ LOCATION & COPYRIGHT
 :canonicurl:    https://github.com/topazeblue/notebooks/blob/main/_lib/AMMGammaLib.py
 :display:       print("AMMGammaLib version {0.__VERSION__} ({0.__DATE__})".format(AMMSim))
 """
-__VERSION__ = "1.1"
-__DATE__ = "25/Dec/2022"
+__VERSION__ = "1.2"
+__DATE__ = "26/Dec/2022"
 
 import numpy as _np
 from collections import namedtuple as nt
@@ -95,6 +95,38 @@ class AMMSim:
         self.fees = 0     
         self.ntrades = 0
         self.nreverted = 0
+
+    def copy(self, p0=None, tvl0=None, feepc=None):
+        """returns a copy of the object"""
+        if p0 is None: p0 = self.p_marg
+        if tvl0 is None: tvl0 = self.tvl
+        if feepc is None: feepc = self.feepc
+        return self.__class__(p0, tvl0, feepc)
+
+    def aggregate(self, simlist):
+        """
+        aggregates a list of sims into a copy of the master sim*
+
+        :simlist:       an iterable of sims that have been run
+        :returns:       a copy of the current object, augmented with the aggregate
+                        information from simlist PROVIDED that there have been no
+                        trades recorded on the current sim
+        """
+        if self.ntrades:
+            raise ValueError("You must only use aggregate on an unused sim (ntrades={self.ntrades})")
+        aggr = (_np.array((o.bleed, o.fees, o.ntrades, o.nreverted)) for o in simlist)
+        aggr = sum(aggr)
+        newobj = self.copy()
+        newobj.bleed        = aggr[0]
+        newobj.fees         = aggr[1]
+        newobj.ntrades      = aggr[2]
+        newobj.nreverted    = aggr[3]
+        return newobj
+        
+    def __call__(seld, *args, **kwargs):
+        """alias for copy"""
+        return self.copy(*args, **kwargs)
+        
         
     @property
     def y(self):
@@ -162,18 +194,27 @@ class AMMSim:
     @property
     def pcreverted(self):
         """percentage reverted"""
-        return self.nreverted/self.ntrades
+        try:
+            return self.nreverted/self.ntrades
+        except ZeroDivisionError:
+            return None
 
     @property
     def pcpassed(self):
         """percentage passed"""
-        return self.npassed/self.ntrades
- 
+        try:
+            return self.npassed/self.ntrades
+        except ZeroDivisionError:
+            return None
+
     @property
     def ammvalcapturepc(self):
         """fees as percentage of bleed (value captured by AMM LPs)"""
-        return self.fees/self.bleed
-    
+        try:
+            return self.fees/self.bleed
+        except ZeroDivisionError:
+            return None  
+
     @property
     def arbvalcapturepc(self):
         """1 - fees as percentage of bleed (value captured by arbitrageurs)"""
