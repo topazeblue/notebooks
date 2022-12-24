@@ -18,7 +18,7 @@ from sympy import Eq, symbols, diff, Derivative as D, Function, sqrt as sqrt_, A
 from math import sqrt
 from scipy.stats import norm
 from matplotlib import pyplot as plt
-
+from ammgammalib import *
 
 # # AMM Gamma vs Derivatives Gamma
 #
@@ -30,51 +30,6 @@ from matplotlib import pyplot as plt
 # [medium2]:https://medium.com/@odtorson/why-amm-gamma-and-derivatives-gamma-is-different-70b51c4692f0
 #
 #
-
-# ## Setup
-
-# +
-def gamma_gain(p0, p1, N=1, feepc=0):
-    """
-    how much an arbitrageurs makes on the gamma 
-    
-    :p0:         price before move
-    :p1:         price after move
-    :N:          notional
-    :feepc:      percentage fee (0.01=1%)
-    :returns:    p1-sqrt(p0*p1) if p1 > p0, else sqrt(p0*p1)-p0
-    """
-    if feepc == 0:
-        return N*abs(p1-sqrt(p0*p1))
-    else:
-        if p0<p1:
-            return max(p1 - sqrt(p0*(1+feepc)*p1), 0)
-        else:
-            return max(sqrt(p0*(1-feepc)*p1) - p1, 0)
-
-            
-    #return N*(p1-sqrt(p0*p1)) if p1 > p0 else N*(sqrt(p0*p1)-p1)
-    
-def fee_payment(fee, p1, N=1):
-    """
-    how much fees to be paid on a transaction
-    
-    :fee:        percentage fee
-    :p1:         price after move
-    :N:          notional
-    :returns:    fee*N*p1
-    """
-    return fee*N*p1
-
-def apply(func, rg):
-    """
-    applies `func` to `rg` and returns result as np.array
-    
-    equivalent to `lambda f,r: np.array([f(x) for x in r])`
-    """
-    return np.array([func(x) for x in rg])
-A=apply
-# -
 
 # ## Formulas
 
@@ -317,114 +272,6 @@ plt.grid()
 
 # ### Simulation
 
-# +
-from collections import namedtuple as nt
-
-trade = nt("trade", "dx, dy, p0, p_trade, p1, bleed, fee, reverted")
-class AMMSim:
-    """
-    AMM Simulator
-    
-    :p0:      initial price (in y per x)
-    :tvl0:    the initial tvl (measured in y)
-    :feepc:   default percentage fees
-    
-    PROPERTIES SET BY THE CONSTRUCTOR
-    :x:         current amount of risk asset held
-    :k:         pool constant
-    :bleed:     cumulative bleed = (market price - trade price) * trade volume [cost to AMM]
-    :fees:      cumulative fees [income to AMM]
-    :ntrades:   number of trades (including reverted)
-    :nreverted: number of reverted trades
-    """
-    def __init__(self, p0=100, tvl0=100, feepc=0):
-        y0 = tvl0/2
-        x0 = y0/p0
-        self.k = x0*y0
-        self.x = x0
-        self.feepc = feepc
-        self.bleed = 0      
-        self.fees = 0     
-        self.ntrades = 0
-        self.nreverted = 0
-        
-    @property
-    def y(self):
-        """current amount of numeraire asset y"""
-        return self.k / self.x
-    
-    @property
-    def tvl(self):
-        """total value locked (in y)"""
-        return self.y*2
-    
-    @property
-    def p_marg(self):
-        """current marginal price (in y per x)"""
-        return self.y / self.x
-    
-    def trade_to(self, price, feepc=None):
-        """
-        trades to a new price
-        
-        :price:     the new price (in y per x)
-        :feepc:     percentage trade fee (if None, use instance defaults)
-        :returns:   trade namedtuple
-                    :dx:            change in risk asset (negative = AMM sells)
-                    :dy:            ditto numeraire asset
-                    :p0:            price before trade (in y per x)
-                    :p_trade:       effective price of the trade (ditto)
-                    :p1:            price after trade (ditto)
-                    :bleed:         bleed of the trade (arbitrageur income)
-                    :fee:           fee of the trade (arbitrgeur expense)
-                    :reverted:      if True, trade has not been counted
-        
-        Note: the counter self.bleed is increased by the amount of bleed suffered
-        """
-        if self.p_marg == price:
-            return trade(0, 0, price, price, price, 0, 0, True)
-        
-        if feepc is None: feepc = self.feepc
-        
-        x0 = self.x
-        y0 = self.y
-        p0 = self.p_marg
-        self.x = sqrt(self.k/price)
-        dx = self.x - x0
-        dy = self.y - y0
-        p_eff0 = -dy/dx
-        p_eff = -(dy*(1-feepc))/dx
-        p1 = self.p_marg
-        bleed = -dx*(p1-p_eff0)
-        fee = abs(dy)*feepc
-        self.ntrades += 1
-        if fee>bleed:
-            self.x = x0
-            self.nreverted += 1
-        else:
-            self.bleed += bleed
-            self.fees += fee
-        return trade(dx, dy, p0, p_eff, p1, bleed, fee, fee>bleed)
-    
-    @property
-    def pcreverted(self):
-        """percentage reverted"""
-        return self.nreverted/self.ntrades
- 
-    @property
-    def feecapture(self):
-        """fees as percentage of bleed"""
-        return self.fees/self.bleed
-    
-# Sim = AMMSim(100, 200)
-# assert Sim.p_marg==2
-# assert Sim.x==100
-# assert Sim.y==200
-# assert Sim.k==100*200
-# #assert Sim.bleed == 41.42135623730951
-
-
-# -
 sim = AMMSim(p0=100, feepc=0.10)
 t = sim.trade_to(150)
 print(f"p={sim.p_marg}, bleed={t.bleed:0.2f}, fee={t.fee:0.2f}, reverted={t.reverted}")
@@ -433,42 +280,6 @@ print(f"p={sim.p_marg}, bleed={t.bleed:0.2f}, fee={t.fee:0.2f}, reverted={t.reve
 t = sim.trade_to(100)
 print(f"p={sim.p_marg}, bleed={t.bleed:0.2f}, fee={t.fee:0.2f}, reverted={t.reverted}")
 
-# +
-from math import log,exp
-def create_prices(sig, N=10, p0=100, T=1, add_p0=False):
-    """
-    creates a series of price
-    
-    :sig:    lognormal volatility (0.1 = 10%)
-    :N:      number of steps
-    :p0:     price at t=0
-    :T:      total time period
-    :add_p0: if True, the first price is p0
-    """
-    dt = T/N
-    vol_sqrt_dt = sig*sqrt(dt)
-    exp_fctr = exp(-sig*sig*dt)
-    #print(f"sig={sig}, dt={dt}, vol_sqrt_dt={vol_sqrt_dt}, exp_fctr={exp_fctr}")
-    random_changes = (vol_sqrt_dt*np.random.randn()*exp_fctr for _ in range(N))
-    marg_multipliers = (1+x for x in random_changes)
-    multipliers = np.cumprod(tuple(marg_multipliers))
-    prices = (p0 * x for x in multipliers)
-    prices = np.array(tuple(prices))
-    if add_p0:
-        prices = np.concatenate(([p0], prices))
-    return prices
-
-# pvals = []
-# for _ in range(10000):
-#     p = create_prices(0.1,100)
-#     pvals += [p[-1]]
-# logpvals = [log(p) for p in pvals]
-# var = sum(x**2 for x in logpvals)/len(logpvals)-(sum(logpvals)/len(logpvals))**2
-# print("average", sum(pvals)/len(pvals))
-# print ("logvar, logsd", var, sqrt(var))
-
-
-# -
 # Below we see a number of example of `create_prices`, creating price paths of differing granularity for covering the same time period. 
 
 vol=0.2
