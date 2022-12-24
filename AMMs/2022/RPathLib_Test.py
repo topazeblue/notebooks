@@ -83,14 +83,14 @@ path=paths[0]
 
 assert len(path.time()) == len(path.path())
 assert len(path.time()) == 501
-assert len(path.time(skip=1)) == 251
-assert len(path.time(skip=2)) == 168
-assert len(path.time(skip=3)) == 126
-assert len(path.time(skip=3, offset=1)) == len(path.time(skip=3, offset=2))
-assert path.time(skip=20)[0] == 0
-assert path.time(skip=20)[-1] == 1
-assert path.time(skip=20, offset=5)[0] == 0
-assert path.time(skip=20, offset=5)[-1] == 1
+assert len(path.time(period=2)) == 251
+assert len(path.time(period=3)) == 168
+assert len(path.time(period=4)) == 126
+assert len(path.time(period=4, offset=1)) == len(path.time(period=4, offset=2))
+assert path.time(period=20)[0] == 0
+assert path.time(period=20)[-1] == 1
+assert path.time(period=20, offset=5)[0] == 0
+assert path.time(period=20, offset=5)[-1] == 1
 
 # ## Examples
 
@@ -100,13 +100,13 @@ for _ in range(50):
 
 p = RPath(PG.newpath(), PG.time)
 
-for skp,ofs, col in [(0,0,"lightblue"), (200,0,"green"), (200,100,"red")]:
-    plt.plot(p.time(skip=skp, offset=ofs), p.path(skip=skp, offset=ofs), color=col, label=f"s={skp}, o={ofs}")
+for prd,ofs, col in [(1,0,"lightblue"), (200,0,"green"), (200,100,"red")]:
+    plt.plot(p.time(period=prd, offset=ofs), p.path(period=prd, offset=ofs), color=col, label=f"p={prd}, o={ofs}")
 plt.legend()
 plt.grid()
 
-for skp,ofs, col in [(0,0,"lightblue"), (20,0,"green"), (125,0,"red")]:
-    plt.plot(p.time(skip=skp, offset=ofs), p.path(skip=skp, offset=ofs), color=col, label=f"s={skp}, o={ofs}")
+for prd,ofs,col in [(1,0,"lightblue"), (20,0,"green"), (125,0,"red")]:
+    plt.plot(p.time(period=prd, offset=ofs), p.path(period=prd, offset=ofs), color=col, label=f"p={prd}, o={ofs}")
 plt.legend()
 plt.grid()
 

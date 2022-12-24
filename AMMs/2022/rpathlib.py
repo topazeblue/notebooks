@@ -24,7 +24,7 @@ class RPath():
     
     :vals:      the values of the path
     :time:      the associated point time*
-    :skip:      default value for skip
+    :period:    default value for period
     :offset:    ditto for offset
     :bounds:    ditto for bounds
     :meta:      a dict of meta data associated to the path (info only; not uses here)
@@ -36,29 +36,29 @@ class RPath():
     __VERSION__ = __VERSION__
     __DATE__    = __DATE__
     
-    def __init__(self, path, time, skip=None, offset=None, bounds=None, meta=None):
+    def __init__(self, path, time, period=None, offset=None, bounds=None, meta=None):
         if len(path)!=len(time):
             raise ValueError("Lenght vals != length time", len(path), len(time))
         self._path = path
         self._time = time
         if meta is None: meta = dict()
         self.meta = meta
-        if skip is None: skip = 0
-        self._skip = skip
+        if period is None: period = 1
+        self._period = period
         self._offset = offset
         self._bounds = bounds
 
-    def resample(self, skip=None, offset=None, bounds=None):
+    def resample(self, period=None, offset=None, bounds=None):
         """
-        returns a new path object with new default values of skip, offset, bounds
+        returns a new path object with new default values of period, offset, bounds
 
         NOTE: __call__ is an alias for resample
         """
         newobj = copy(self)
-        if not skip is None: newobj._skip=skip
+        if not period is None: newobj._period=period
         if not offset is None: newobj._offset=offset
         if not bounds is None: newobj._bounds=bounds
-        #print("[resample] {0._skip}, {0._offset}, {0._bounds}".format(newobj))
+        #print("[resample] {0._period}, {0._offset}, {0._bounds}".format(newobj))
         return newobj
 
     def __call__(self, *args, **kwargs):
@@ -66,8 +66,8 @@ class RPath():
         return self.resample(*args, **kwargs)
 
     @property
-    def skip(self):
-        return self._skip
+    def period(self):
+        return self._period
 
     @property
     def offset(self):
@@ -79,25 +79,24 @@ class RPath():
 
         
     @staticmethod
-    def extraction_pattern(N_points, skip=None, offset=None, bounds=None):
+    def extraction_pattern(N_points, period=None, offset=None, bounds=None):
         """
         creates the extraction pattern (eg 1,0,0,1,0,0,1,0,0,1)
 
         :N_points:  length of pattern vector (points, not periods)
-        :skip:      how many elements to skip, eg skip=2 gives 1,0,0,1,0,0,...
-        :offset:    offset within skip, eg skip=3, offset=1 gives 0,1,0,0, 0,1,0,0, 0,1,0,0
+        :period:    period length; eg period=3 gives 1,0,0,1,0,0,...
+        :offset:    offset within period, eg period=4, offset=1 gives 0,1,0,0, 0,1,0,0, 0,1,0,0
         :bounds:    if True, includes the boundaries in the pattern
         """
-        if skip is None: skip = 0
+        if period is None: period = 1
         if offset is None: offset = 0
         if bounds is None: bounds = True
-        if skip == 0:
+        if period == 1:
             return np.array([1 for i in range(N_points)])
 
-        if offset > skip:
-            raise ValueError("Offset must be less or equal than skip", offset, skip)
-        mod = skip+1
-        result = np.array([1 if i % mod == offset else 0 for i in range(N_points)])
+        if offset >= period:
+            raise ValueError("Offset must be less than period", offset, period)
+        result = np.array([1 if i % period == offset else 0 for i in range(N_points)])
         if bounds:
             result[0] = 1
             result[-1] = 1
@@ -108,45 +107,45 @@ class RPath():
         """applies pattern to vec, ie only returns item for which it is unity"""
         return np.array([x for x,p in zip(vec, pattern) if p])
     
-    def extract(self, vec, skip=None, offset=None, bounds=None):
+    def extract(self, vec, period=None, offset=None, bounds=None):
         """
         applies extraction_pattern to vec
         
-        :skip:    how many elements to skip, eg skip=2 gives 1,0,0,1,0,0,...
-        :offset:  offset within skip, eg skip=3, offset=1 gives 0,1,0,0, 0,1,0,0, 0,1,0,0
-        :bounds:  if True, includes the boundaries in the pattern
+        :period:    period length; eg period=3 gives 1,0,0,1,0,0,...
+        :offset:    offset within period, eg period=4, offset=1 gives 0,1,0,0, 0,1,0,0, 0,1,0,0
+        :bounds:    if True, includes the boundaries in the pattern
         """
         vec = np.array(vec)
-        if skip is None: skip = self._skip
+        if period is None: period = self._period
         if offset is None: offset = self._offset
         if bounds is None: bounds = self._bounds
-        pattern = self.extraction_pattern(len(vec), skip, offset, bounds)
+        pattern = self.extraction_pattern(len(vec), period, offset, bounds)
         return self.apply_pattern(vec, pattern)
     
-    def path(self, skip=None, offset=None, bounds=None):
+    def path(self, period=None, offset=None, bounds=None):
         """
-        extracts the path with using extract(path, skip, offset, bounds)
+        extracts the path with using extract(path, period, offset, bounds)
         """
-        return self.extract(self._path, skip, offset, bounds)
+        return self.extract(self._path, period, offset, bounds)
         
-    def time(self, skip=None, offset=None, bounds=None):
+    def time(self, period=None, offset=None, bounds=None):
         """
-        extracts the time with using extract(path, skip, offset, bounds)
+        extracts the time with using extract(path, period, offset, bounds)
         """
-        return self.extract(self._time, skip, offset, bounds)  
+        return self.extract(self._time, period, offset, bounds)  
     
-    def period(self, skip=None, offset=None, bounds=None):
+    def periodtime(self, period=None, offset=None, bounds=None):
         """
-        extracts the time with using extract(path, skip, offset, bounds)
+        extracts the time with using extract(path, period, offset, bounds)
         """
-        if skip is None: skip = self._skip
-        return self.period0 * (1+skip) 
+        if period is None: period = self._period
+        return self.periodtime0 * period
     
-    def N(self, skip=None, offset=None, bounds=None):
+    def N(self, period=None, offset=None, bounds=None):
         """
-        extracts the time with using extract(path, skip, offset, bounds); periods, not points
+        extracts the time with using extract(path, period, offset, bounds); periods, not points
         """
-        pattern = self.extraction_pattern(len(self._time), skip, offset, bounds)
+        pattern = self.extraction_pattern(len(self._time), period, offset, bounds)
         return sum(pattern)-1
 
     @property
@@ -160,7 +159,7 @@ class RPath():
         return self._time
 
     @property
-    def period0(self):
+    def periodtime0(self):
         """base period (assumed constant, ie t[1]-t[0])"""
         return self._time[1]-self._time[0]
     
