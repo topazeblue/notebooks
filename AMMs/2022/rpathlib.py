@@ -4,11 +4,12 @@ Generating and processing random paths
 :Path:      class representing a path
 :PathGen:   path generator
 
-VERSION HISTORY
+LOCATION & COPYRIGHT
 
 :copyright:     (c) Copyright Stefan LOESCH / topaze.blue 2022
 :license:       MIT
-:canonicurl:    https://github.com/topazeblue/TopazePublishing/blob/main/code/fls.py
+:canonicurl:    https://github.com/topazeblue/notebooks
+:display:       print("RPathLib version {0.__VERSION__} ({0.__DATE__})".format(RPath))
 """
 __VERSION__ = "1.0"
 __DATE__ = "23/Dec/2022"
@@ -23,6 +24,9 @@ class RPath():
     
     :vals:      the values of the path
     :time:      the associated point time*
+    :skip:      default value for skip
+    :offset:    ditto for offset
+    :bounds:    ditto for bounds
     :meta:      a dict of meta data associated to the path (info only; not uses here)
     
     NOTE. If you use PathGen.time to generate the time vector, each of them will be the 
@@ -32,34 +36,68 @@ class RPath():
     __VERSION__ = __VERSION__
     __DATE__    = __DATE__
     
-    def __init__(self, path, time, meta=None):
+    def __init__(self, path, time, skip=None, offset=None, bounds=None, meta=None):
         if len(path)!=len(time):
             raise ValueError("Lenght vals != length time", len(path), len(time))
         self._path = path
         self._time = time
         if meta is None: meta = dict()
         self.meta = meta
+        if skip is None: skip = 0
+        self._skip = skip
+        self._offset = offset
+        self._bounds = bounds
+
+    def resample(self, skip=None, offset=None, bounds=None):
+        """
+        returns a new path object with new default values of skip, offset, bounds
+
+        NOTE: __call__ is an alias for resample
+        """
+        newobj = copy(self)
+        if not skip is None: newobj._skip=skip
+        if not offset is None: newobj._offset=offset
+        if not bounds is None: newobj._bounds=bounds
+        #print("[resample] {0._skip}, {0._offset}, {0._bounds}".format(newobj))
+        return newobj
+
+    def __call__(self, *args, **kwargs):
+        """alias for resample"""
+        return self.resample(*args, **kwargs)
+
+    @property
+    def skip(self):
+        return self._skip
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @property
+    def bounds(self):
+        return self._bounds
+
         
     @staticmethod
-    def extraction_pattern(N, skip=None, offset=None, bounds=None):
+    def extraction_pattern(N_points, skip=None, offset=None, bounds=None):
         """
         creates the extraction pattern (eg 1,0,0,1,0,0,1,0,0,1)
 
-        :N:       length of pattern vector
-        :skip:    how many elements to skip, eg skip=2 gives 1,0,0,1,0,0,...
-        :offset:  offset within skip, eg skip=3, offset=1 gives 0,1,0,0, 0,1,0,0, 0,1,0,0
-        :bounds:  if True, includes the boundaries in the pattern
+        :N_points:  length of pattern vector (points, not periods)
+        :skip:      how many elements to skip, eg skip=2 gives 1,0,0,1,0,0,...
+        :offset:    offset within skip, eg skip=3, offset=1 gives 0,1,0,0, 0,1,0,0, 0,1,0,0
+        :bounds:    if True, includes the boundaries in the pattern
         """
         if skip is None: skip = 0
         if offset is None: offset = 0
         if bounds is None: bounds = True
         if skip == 0:
-            return np.array([1 for i in range(N+1)])
+            return np.array([1 for i in range(N_points)])
 
         if offset > skip:
             raise ValueError("Offset must be less or equal than skip", offset, skip)
         mod = skip+1
-        result = np.array([1 if i % mod == offset else 0 for i in range(N)])
+        result = np.array([1 if i % mod == offset else 0 for i in range(N_points)])
         if bounds:
             result[0] = 1
             result[-1] = 1
@@ -70,8 +108,7 @@ class RPath():
         """applies pattern to vec, ie only returns item for which it is unity"""
         return np.array([x for x,p in zip(vec, pattern) if p])
     
-    @classmethod
-    def extract(cls, vec, skip, offset=None, bounds=None):
+    def extract(self, vec, skip=None, offset=None, bounds=None):
         """
         applies extraction_pattern to vec
         
@@ -80,8 +117,11 @@ class RPath():
         :bounds:  if True, includes the boundaries in the pattern
         """
         vec = np.array(vec)
-        pattern = cls.extraction_pattern(len(vec), skip, offset, bounds)
-        return cls.apply_pattern(vec, pattern)
+        if skip is None: skip = self._skip
+        if offset is None: offset = self._offset
+        if bounds is None: bounds = self._bounds
+        pattern = self.extraction_pattern(len(vec), skip, offset, bounds)
+        return self.apply_pattern(vec, pattern)
     
     def path(self, skip=None, offset=None, bounds=None):
         """
@@ -95,6 +135,20 @@ class RPath():
         """
         return self.extract(self._time, skip, offset, bounds)  
     
+    def period(self, skip=None, offset=None, bounds=None):
+        """
+        extracts the time with using extract(path, skip, offset, bounds)
+        """
+        if skip is None: skip = self._skip
+        return self.period0 * (1+skip) 
+    
+    def N(self, skip=None, offset=None, bounds=None):
+        """
+        extracts the time with using extract(path, skip, offset, bounds); periods, not points
+        """
+        pattern = self.extraction_pattern(len(self._time), skip, offset, bounds)
+        return sum(pattern)-1
+
     @property
     def path0(self):
         """full path"""
@@ -104,7 +158,21 @@ class RPath():
     def time0(self):
         """full time"""
         return self._time
+
+    @property
+    def period0(self):
+        """base period (assumed constant, ie t[1]-t[0])"""
+        return self._time[1]-self._time[0]
     
+    @property
+    def N0(self):
+        """base length (number of periods, not points)"""
+        return len(self._time)-1
+
+    @property
+    def T(self):
+        """total time period"""
+        return self._time[-1] - self._time[0]
     
 class RPathGen():
     """
@@ -114,7 +182,6 @@ class RPathGen():
     :val0:        initially value (DEFAULT_VAL0 if None)
     :T:           time period (DEFAULT_T if None)
     :N:           number of observation excluding val0 (DEFAULT_N if None)
-    :val0:        initially value (DEFAULT_VAL0 if None)
     :params:      params as dict, DEFAULT_PARAMS[method] if None
     :kwargs:      alternative for params
     """
