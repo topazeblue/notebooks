@@ -10,13 +10,14 @@ TECHNICAL HELPER FUNCTIONS
 :apply:           equivalent to lambda p,rg: np.array([func(x) for x in rg])
 :A:               alias for Apply
 
-VERSION HISTORY
+LOCATION & COPYRIGHT
 
 :copyright:     (c) Copyright Stefan LOESCH / topaze.blue 2022
 :license:       MIT
-:canonicurl:    https://github.com/topazeblue/notebooks
+:canonicurl:    https://github.com/topazeblue/notebooks/blob/main/_lib/AMMGammaLib.py
+:display:       print("AMMGammaLib version {0.__VERSION__} ({0.__DATE__})".format(AMMSim))
 """
-__VERSION__ = "1.0"
+__VERSION__ = "1.0.1"
 __DATE__ = "24/Dec/2022"
 
 import numpy as _np
@@ -154,14 +155,45 @@ class AMMSim:
         return trade(dx, dy, p0, p_eff, p1, bleed, fee, fee>bleed)
     
     @property
+    def npassed(self):
+        """number of trades passed"""
+        return self.ntrades-self.nreverted
+
+    @property
     def pcreverted(self):
         """percentage reverted"""
         return self.nreverted/self.ntrades
+
+    @property
+    def pcpassed(self):
+        """percentage passed"""
+        return self.npassed/self.ntrades
  
     @property
-    def feecapture(self):
-        """fees as percentage of bleed"""
+    def ammvalcapturepc(self):
+        """fees as percentage of bleed (value captured by AMM LPs)"""
         return self.fees/self.bleed
+    
+    @property
+    def arbvalcapturepc(self):
+        """1 - fees as percentage of bleed (value captured by arbitrageurs)"""
+        return 1-self.ammvalcapturepc
+
+    @property
+    def totalvalcapture(self):
+        """total value captured (=bleed)"""
+        return self.bleed
+
+    @property
+    def ammvalcapture(self):
+        """value captured by AMM LPs (ie fees)"""
+        return self.fees
+    
+    @property
+    def arbvalcapture(self):
+        """value captured by arbitrageurs (ie total - fees)"""
+        return self.totalvalcapture-self.ammvalcapture
+
 
 
 

@@ -14,7 +14,7 @@ LOCATION & COPYRIGHT
 
 :copyright:     (c) Copyright Stefan LOESCH / topaze.blue 2022
 :license:       MIT
-:canonicurl:    https://github.com/topazeblue/notebooks
+:canonicurl:    https://github.com/topazeblue/notebooks/blob/main/_lib/AMMGammaLib.py
 :display:       print("AMMGammaLib version {0.__VERSION__} ({0.__DATE__})".format(AMMSim))
 """
 __VERSION__ = "1.1"

@@ -3,7 +3,7 @@ Simple BlackScholes option pricing object
 
 :copyright:     (c) Copyright Stefan LOESCH / topaze.blue 2022; ALL RIGHTS RESERVED
 :license:       MIT
-:canonicurl:    https://github.com/topazeblue/notebooks/Options/2022/blackscholes.py
+:canonicurl:    https://github.com/topazeblue/notebooks/blob/main/_lib/BlackScholesLib.py
 
 """
 __VERSION__ = "1.0"

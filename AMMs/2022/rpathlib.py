@@ -8,11 +8,11 @@ LOCATION & COPYRIGHT
 
 :copyright:     (c) Copyright Stefan LOESCH / topaze.blue 2022
 :license:       MIT
-:canonicurl:    https://github.com/topazeblue/notebooks
+:canonicurl:    https://github.com/topazeblue/notebooks/blob/main/_lib/RPathLib.py
 :display:       print("RPathLib version {0.__VERSION__} ({0.__DATE__})".format(RPath))
 """
-__VERSION__ = "1.0"
-__DATE__ = "23/Dec/2022"
+__VERSION__ = "1.0.1"
+__DATE__ = "25/Dec/2022"
 
 import numpy as np
 from math import sqrt, log, exp
@@ -45,7 +45,9 @@ class RPath():
         self.meta = meta
         if period is None: period = 1
         self._period = period
+        if offset is None: offset = 0
         self._offset = offset
+        if bounds is None: bounds = True
         self._bounds = bounds
 
     def resample(self, period=None, offset=None, bounds=None):
@@ -72,7 +74,6 @@ class RPath():
     @property
     def offset(self):
         return self._offset
-
     @property
     def bounds(self):
         return self._bounds
