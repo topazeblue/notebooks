@@ -11,8 +11,8 @@ LOCATION & COPYRIGHT
 :canonicurl:    https://github.com/topazeblue/notebooks/blob/main/_lib/RPathLib.py
 :display:       print("RPathLib version {0.__VERSION__} ({0.__DATE__})".format(RPath))
 """
-__VERSION__ = "1.0.1"
-__DATE__ = "25/Dec/2022"
+__VERSION__ = "1.1"
+__DATE__ = "26/Dec/2022"
 
 import numpy as np
 from math import sqrt, log, exp
@@ -285,3 +285,32 @@ class RPathGen():
 
 LOGNORM = RPathGen.LOGNORM 
 NORM = RPathGen.NORM 
+
+import time as _time
+def recordtime(stage=None, init=False):
+    """
+    records the time (printing it out)
+    
+    :startt:    start time
+    :returns:   current time (as time.time())
+    
+    USAGE
+    
+        STARTT = recordtime()
+        ...
+        recordtime(STARTT, "intermediate")
+        ...
+        recordtime(STARTT)
+    """
+    if not '_RECORDTIME_STARTT' in globals():
+        init = True
+    if init:
+        print(f'RECORDTIME -- Starting recording')
+        global _RECORDTIME_STARTT
+        _RECORDTIME_STARTT = _time.time()
+        return
+
+    exect = _time.time() - _RECORDTIME_STARTT
+    stage = f" [{stage}]" if stage else ""
+    print(f'RECORDTIME -- {exect:4.1f}s{stage}')
+    return exect
